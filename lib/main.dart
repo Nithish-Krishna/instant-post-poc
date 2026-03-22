@@ -65,24 +65,20 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
   Timer? _loadingTimer;
   final TextEditingController _textController = TextEditingController();
   final FocusNode _inputFocusNode = FocusNode();
-  String? _selectedImagePath;
+  List<String> _selectedImagePaths = [];
   int _promptIndex = 0;
   int _hintIndex = 0;
   Timer? _hintTimer;
 
   String _generatedCaption =
-      "mornings done right ☕🥐\n\n"
-      "nothing beats the smell of fresh coffee and warm pastries. "
-      "the perfect way to start the day. ✨\n\n"
-      "#coffee #pastry #morningvibes #aesthetic #breakfast";
+      "Something new just dropped ✨🍰\n\n"
+      "Our summer menu is here — iced coffees ☕, fresh croissants 🥐 & desserts made for chill days 🍃\n\n"
+      "Enjoy 10% off this weekend 💸 Pull up 📍\n\n"
+      "#SummerMenu #CafeVibes #DessertDrop #ColdCoffee #WeekendPlans";
   String _generatedMusic = "Golden Hour";
 
   final List<String> _examplePrompts = [
-    "A minimalist flat lay of golden croissants on a clean white plate.",
-    "A futuristic cyberpunk cityscape at night with neon signs.",
-    "A cozy mountain cabin surrounded by snow and pine trees.",
-    "A vibrant street market in Marrakech with colorful spices.",
-    "A serene zen garden with a small pond and cherry blossoms.",
+    "New summer menu, 10% off this weekend",
   ];
 
   final List<String> _hintPrompts = [
@@ -130,10 +126,10 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
 
   void _startGeneration() {
     if (_textController.text.isEmpty) return;
-    
+
     HapticFeedback.mediumImpact();
     FocusScope.of(context).unfocus();
-    
+
     setState(() {
       _currentState = AppState.loading;
       _loadingTextIndex = 0;
@@ -142,7 +138,7 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
     // Clear inputs after starting generation
     _textController.clear();
     setState(() {
-      _selectedImagePath = null;
+      _selectedImagePaths = [];
     });
 
     _loadingTimer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
@@ -166,7 +162,7 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
     setState(() {
       _currentState = AppState.input;
       _textController.clear();
-      _selectedImagePath = null;
+      _selectedImagePaths = [];
     });
   }
 
@@ -302,67 +298,98 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Image Preview Area
-                                  if (_selectedImagePath != null)
+                                  if (_selectedImagePaths.isNotEmpty)
                                     Padding(
                                       padding: const EdgeInsets.only(
                                         top: 16,
                                         left: 16,
                                         right: 16,
                                       ),
-                                      child: Stack(
-                                        children: [
-                                          Container(
-                                                height: 80,
-                                                width: 80,
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(12),
-                                                  image: DecorationImage(
-                                                    image: AssetImage(
-                                                      _selectedImagePath!,
-                                                    ),
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                  border: Border.all(
-                                                    color: Colors.white
-                                                        .withOpacity(0.1),
-                                                  ),
-                                                ),
-                                              )
-                                              .animate()
-                                              .scale(
-                                                begin: const Offset(0.8, 0.8),
-                                                end: const Offset(1, 1),
-                                                curve: Curves.easeOutBack,
-                                              )
-                                              .fadeIn(),
-                                          Positioned(
-                                            top: -4,
-                                            right: -4,
-                                            child: GestureDetector(
-                                              onTap: () {
-                                                HapticFeedback.lightImpact();
-                                                setState(() {
-                                                  _selectedImagePath = null;
-                                                });
-                                              },
-                                              child: Container(
-                                                padding: const EdgeInsets.all(
-                                                  4,
-                                                ),
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.black54,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(
-                                                  LucideIcons.x,
-                                                  color: Colors.white,
-                                                  size: 14,
-                                                ),
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        physics: const BouncingScrollPhysics(),
+                                        child: Row(
+                                          children: _selectedImagePaths.map((
+                                            path,
+                                          ) {
+                                            return Padding(
+                                              padding: const EdgeInsets.only(
+                                                right: 12,
                                               ),
-                                            ),
-                                          ),
-                                        ],
+                                              child: Stack(
+                                                children: [
+                                                  Container(
+                                                        height: 80,
+                                                        width: 80,
+                                                        decoration: BoxDecoration(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12,
+                                                              ),
+                                                          image:
+                                                              DecorationImage(
+                                                                image:
+                                                                    AssetImage(
+                                                                      path,
+                                                                    ),
+                                                                fit: BoxFit
+                                                                    .cover,
+                                                              ),
+                                                          border: Border.all(
+                                                            color: Colors.white
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                      )
+                                                      .animate()
+                                                      .scale(
+                                                        begin: const Offset(
+                                                          0.8,
+                                                          0.8,
+                                                        ),
+                                                        end: const Offset(1, 1),
+                                                        curve:
+                                                            Curves.easeOutBack,
+                                                      )
+                                                      .fadeIn(),
+                                                  Positioned(
+                                                    top: -4,
+                                                    right: -4,
+                                                    child: GestureDetector(
+                                                      onTap: () {
+                                                        HapticFeedback.lightImpact();
+                                                        setState(() {
+                                                          _selectedImagePaths
+                                                              .remove(path);
+                                                        });
+                                                      },
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets.all(
+                                                              4,
+                                                            ),
+                                                        decoration:
+                                                            const BoxDecoration(
+                                                              color: Colors
+                                                                  .black54,
+                                                              shape: BoxShape
+                                                                  .circle,
+                                                            ),
+                                                        child: const Icon(
+                                                          LucideIcons.x,
+                                                          color: Colors.white,
+                                                          size: 14,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }).toList(),
+                                        ),
                                       ),
                                     ),
                                   // Input field
@@ -380,8 +407,11 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
                                           onTap: () {
                                             HapticFeedback.selectionClick();
                                             setState(() {
-                                              _selectedImagePath =
-                                                  'assets/post.webp';
+                                              _selectedImagePaths = [
+                                                'assets/cupcake.png',
+                                                'assets/coffee.png',
+                                                'assets/crossiant.png',
+                                              ];
                                             });
                                           },
                                           child: Container(
@@ -903,7 +933,7 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
                             AspectRatio(
                                   aspectRatio: 4 / 5,
                                   child: Image.asset(
-                                    'assets/post.webp',
+                                    'assets/post2.png',
                                     fit: BoxFit.cover,
                                   ),
                                 )
@@ -998,7 +1028,11 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
                                             fontWeight: FontWeight.w700,
                                           ),
                                         ),
-                                        TextSpan(text: _generatedCaption),
+                                          TextSpan(
+                                            children: _buildCaptionSpans(
+                                              _generatedCaption,
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -1153,8 +1187,8 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
                           onTap: () async {
                             HapticFeedback.mediumImpact();
                             await dl.downloadAsset(
-                              "assets/post.webp",
-                              "my_instagram_post.webp",
+                              "assets/post2.png",
+                              "my_instagram_post.png",
                             );
                             setDialogState(() => completedSteps.add(1));
                             Future.delayed(const Duration(seconds: 2), () {
@@ -1342,6 +1376,33 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
         ],
       ),
     );
+  }
+
+  List<InlineSpan> _buildCaptionSpans(String text) {
+    final List<InlineSpan> spans = [];
+    final RegExp exp = RegExp(r"(#\w+)");
+    final matches = exp.allMatches(text);
+
+    int lastMatchEnd = 0;
+    for (final match in matches) {
+      if (match.start > lastMatchEnd) {
+        spans.add(TextSpan(text: text.substring(lastMatchEnd, match.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: match.group(0),
+          style: const TextStyle(
+            color: Color(0xFF6366F1),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+      lastMatchEnd = match.end;
+    }
+    if (lastMatchEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastMatchEnd)));
+    }
+    return spans;
   }
 }
 
