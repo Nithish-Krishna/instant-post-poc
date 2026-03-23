@@ -30,8 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_fonts: ^6.1.0
-  flutter_animate: ^4.5.0
+  google_fonts: ^8.0.2
+  flutter_animate: ^4.5.2
   glassmorphism: ^3.0.0
   shimmer: ^3.0.0
   lucide_icons: ^0.257.0
@@ -65,18 +65,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/like.png
-    - assets/comment.png
-    - assets/send.png
-    - assets/save.png
-    - assets/post.webp
-    - assets/post2.png
-    - assets/cupcake.png
-    - assets/coffee.png
-    - assets/crossiant.png
-    - assets/profile.jpg
-    - assets/check.png
-    - assets/check2.png
+    - assets/
 
 
   # An image asset can refer to one or more resolution-specific "variants", see
