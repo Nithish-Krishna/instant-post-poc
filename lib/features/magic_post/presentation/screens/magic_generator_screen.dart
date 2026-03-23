@@ -245,24 +245,6 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
           textController: _textController,
           inputFocusNode: _inputFocusNode,
           selectedTone: _selectedTone,
-          selectedImagePaths: _selectedImagePaths,
-          onImageSelect: () {
-            HapticFeedback.selectionClick();
-            setState(() {
-              _selectedImagePaths = [
-                'assets/cupcake.png', // Assuming dummy assets
-                'assets/coffee.png',
-                'assets/crossiant.png',
-              ];
-            });
-          },
-          onImageRemove: () {
-            HapticFeedback.lightImpact();
-            setState(() {
-              // Usually you pass index/path to remove specific one, hardcoding removal assuming 1 for simplicity here
-              _selectedImagePaths.clear();
-            });
-          },
           onToneChanged: (tone) {
             HapticFeedback.selectionClick();
             setState(() => _selectedTone = tone);

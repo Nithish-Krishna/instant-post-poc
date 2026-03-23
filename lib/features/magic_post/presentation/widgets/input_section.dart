@@ -4,17 +4,19 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/bouncing_widget.dart';
 import '../../../../core/constants/mock_data.dart';
+import '../../../../core/config/app_environment.dart';
+import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
 
 class InputSection extends StatefulWidget {
   final TextEditingController textController;
   final FocusNode inputFocusNode;
   final String selectedTone;
-  final List<String> selectedImagePaths;
-  final VoidCallback onImageSelect;
-  final VoidCallback onImageRemove;
   final ValueChanged<String> onToneChanged;
   final VoidCallback onPromptWand;
   final VoidCallback onGenerate;
@@ -25,9 +27,6 @@ class InputSection extends StatefulWidget {
     required this.textController,
     required this.inputFocusNode,
     required this.selectedTone,
-    required this.selectedImagePaths,
-    required this.onImageSelect,
-    required this.onImageRemove,
     required this.onToneChanged,
     required this.onPromptWand,
     required this.onGenerate,
@@ -40,9 +39,150 @@ class InputSection extends StatefulWidget {
 
 class _InputSectionState extends State<InputSection> {
   int _hintIndex = 0;
-  // Timer could be managed here if needed, but since parent can rebuild the layout, 
-  // we'll keep the timer logic in parent or let input section manage its own hint index.
   
+  List<Object> _selectedImages = [];
+  final ImagePicker _picker = ImagePicker();
+
+  final SpeechToText _speechToText = SpeechToText();
+  bool _speechEnabled = false;
+  bool _isListening = false;
+  String _previousText = '';
+  final GlobalKey<PopupMenuButtonState<int>> _attachmentMenuKey = GlobalKey<PopupMenuButtonState<int>>();
+
+  @override
+  void initState() {
+    super.initState();
+    _initSpeech();
+  }
+
+  Future<void> _initSpeech() async {
+    try {
+      _speechEnabled = await _speechToText.initialize(
+        onStatus: (status) {
+          if (status == 'done' || status == 'notListening') {
+            if (mounted) {
+              setState(() {
+                _isListening = false;
+              });
+            }
+          }
+        },
+        onError: (errorNotification) {
+          debugPrint('Speech recognition error: ${errorNotification.errorMsg}');
+          if (mounted) {
+            setState(() {
+              _isListening = false;
+            });
+          }
+        },
+      );
+    } catch (e) {
+      debugPrint('Speech recognition init error: $e');
+      _speechEnabled = false;
+    }
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _toggleMic() async {
+    if (!_speechEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Microphone access denied or not supported by this browser."),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (_isListening) {
+      await _speechToText.stop();
+      setState(() {
+        _isListening = false;
+      });
+    } else {
+      _previousText = widget.textController.text;
+      if (_previousText.isNotEmpty && !_previousText.endsWith(' ')) {
+        _previousText += ' ';
+      }
+      
+      setState(() {
+        _isListening = true;
+      });
+      
+      await _speechToText.listen(
+        onResult: _onSpeechResult,
+        listenFor: const Duration(seconds: 30),
+        pauseFor: const Duration(seconds: 3),
+        partialResults: true,
+      );
+    }
+  }
+
+  void _onSpeechResult(SpeechRecognitionResult result) {
+    if (mounted) {
+      setState(() {
+        widget.textController.text = _previousText + result.recognizedWords;
+        widget.textController.selection = TextSelection.fromPosition(
+          TextPosition(offset: widget.textController.text.length),
+        );
+      });
+    }
+  }
+
+  Future<void> _handleCameraPick() async {
+    final isDemoMode = context.read<AppEnvironment>().isDemoMode;
+    if (isDemoMode) {
+      setState(() {
+        _selectedImages.addAll([
+          'assets/cupcake.png', // Assuming dummy assets
+          'assets/coffee.png',
+          'assets/crossiant.png',
+        ]);
+      });
+    } else {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+      if (photo != null) {
+        setState(() {
+          _selectedImages.add(photo);
+        });
+      }
+    }
+  }
+
+  Future<void> _handleGalleryPick() async {
+    final isDemoMode = context.read<AppEnvironment>().isDemoMode;
+    if (isDemoMode) {
+      setState(() {
+        _selectedImages.addAll([
+          'assets/cupcake.png',
+          'assets/coffee.png',
+          'assets/crossiant.png',
+        ]);
+      });
+    } else {
+      final List<XFile> images = await _picker.pickMultiImage();
+      if (images.isNotEmpty) {
+        setState(() {
+          _selectedImages.addAll(images);
+        });
+      }
+    }
+  }
+
+  // API Preparation Method (Do Not Wire to UI yet, just prepare it)
+  // This is for the upcoming REST API POST request.
+  Future<List<Uint8List>> getImagesForApiPost() async {
+    List<Uint8List> byteImages = [];
+    for (var item in _selectedImages) {
+      if (item is XFile) {
+        byteImages.add(await item.readAsBytes());
+      }
+    }
+    return byteImages;
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -138,7 +278,7 @@ class _InputSectionState extends State<InputSection> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Image Preview Area
-                              if (widget.selectedImagePaths.isNotEmpty)
+                              if (_selectedImages.isNotEmpty)
                                 Padding(
                                   padding: const EdgeInsets.only(
                                     top: 16,
@@ -149,7 +289,10 @@ class _InputSectionState extends State<InputSection> {
                                     scrollDirection: Axis.horizontal,
                                     physics: const BouncingScrollPhysics(),
                                     child: Row(
-                                      children: widget.selectedImagePaths.map((path) {
+                                      children: _selectedImages.asMap().entries.map((entry) {
+                                        final int index = entry.key;
+                                        final Object item = entry.value;
+
                                         return Padding(
                                           padding: const EdgeInsets.only(right: 12),
                                           child: Stack(
@@ -157,16 +300,16 @@ class _InputSectionState extends State<InputSection> {
                                               Container(
                                                 height: 80,
                                                 width: 80,
+                                                clipBehavior: Clip.antiAlias,
                                                 decoration: BoxDecoration(
                                                   borderRadius: BorderRadius.circular(12),
-                                                  image: DecorationImage(
-                                                    image: AssetImage(path),
-                                                    fit: BoxFit.cover,
-                                                  ),
                                                   border: Border.all(
                                                     color: Colors.white.withOpacity(0.1),
                                                   ),
                                                 ),
+                                                child: item is String
+                                                    ? Image.asset(item, fit: BoxFit.cover)
+                                                    : Image.network((item as XFile).path, fit: BoxFit.cover),
                                               ).animate().scale(
                                                     begin: const Offset(0.8, 0.8),
                                                     end: const Offset(1, 1),
@@ -176,7 +319,12 @@ class _InputSectionState extends State<InputSection> {
                                                 top: -4,
                                                 right: -4,
                                                 child: GestureDetector(
-                                                  onTap: widget.onImageRemove,
+                                                  onTap: () {
+                                                    HapticFeedback.lightImpact();
+                                                    setState(() {
+                                                      _selectedImages.removeAt(index);
+                                                    });
+                                                  },
                                                   child: Container(
                                                     padding: const EdgeInsets.all(4),
                                                     decoration: const BoxDecoration(
@@ -207,20 +355,96 @@ class _InputSectionState extends State<InputSection> {
                                 child: Row(
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    // Image attachment icon
-                                    BouncingWidget(
-                                      onTap: widget.onImageSelect,
-                                      child: Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.06),
-                                          borderRadius: BorderRadius.circular(12),
+                                    // Attachment + button
+                                    Theme(
+                                      data: Theme.of(context).copyWith(
+                                        popupMenuTheme: PopupMenuThemeData(
+                                          color: AppColors.surface,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(16),
+                                            side: BorderSide(
+                                              color: Colors.white.withOpacity(0.08),
+                                            ),
+                                          ),
                                         ),
-                                        child: Icon(
-                                          LucideIcons.image,
-                                          color: Colors.white.withOpacity(0.6),
-                                          size: 20,
+                                      ),
+                                      child: PopupMenuButton<int>(
+                                        key: _attachmentMenuKey,
+                                        offset: const Offset(0, -96),
+                                        popUpAnimationStyle: AnimationStyle(
+                                          duration: Duration.zero,
+                                          reverseDuration: Duration.zero,
+                                        ),
+                                        onSelected: (value) {
+                                          if (value == 0) {
+                                            _handleCameraPick();
+                                          } else if (value == 1) {
+                                            _handleGalleryPick();
+                                          }
+                                        },
+                                        itemBuilder: (context) => [
+                                          PopupMenuItem(
+                                            value: 0,
+                                            height: 40,
+                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  LucideIcons.camera,
+                                                  color: Colors.white.withOpacity(0.7),
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Text(
+                                                  "Take photo",
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem(
+                                            value: 1,
+                                            height: 40,
+                                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  LucideIcons.image,
+                                                  color: Colors.white.withOpacity(0.7),
+                                                  size: 18,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Text(
+                                                  "Upload photos",
+                                                  style: GoogleFonts.inter(
+                                                    color: Colors.white,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                        child: BouncingWidget(
+                                          onTap: () {
+                                            _attachmentMenuKey.currentState?.showButtonMenu();
+                                          },
+                                          child: Container(
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.06),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Icon(
+                                              LucideIcons.plus,
+                                              color: Colors.white.withOpacity(0.6),
+                                              size: 20,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -271,19 +495,50 @@ class _InputSectionState extends State<InputSection> {
                                     BouncingWidget(
                                       onTap: () {
                                         HapticFeedback.selectionClick();
+                                        _toggleMic();
                                       },
-                                      child: Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.06),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Icon(
-                                          LucideIcons.mic,
-                                          color: Colors.white.withOpacity(0.6),
-                                          size: 20,
-                                        ),
+                                      child: Builder(
+                                        builder: (context) {
+                                          Widget micIcon = AnimatedContainer(
+                                            duration: const Duration(milliseconds: 250),
+                                            width: 44,
+                                            height: 44,
+                                            decoration: BoxDecoration(
+                                              color: _isListening
+                                                  ? AppColors.primary.withOpacity(0.15)
+                                                  : Colors.white.withOpacity(0.06),
+                                              borderRadius: BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: _isListening
+                                                    ? AppColors.primary.withOpacity(0.4)
+                                                    : Colors.transparent,
+                                                width: 1,
+                                              ),
+                                              boxShadow: _isListening
+                                                  ? [
+                                                      BoxShadow(
+                                                        color: AppColors.primary.withOpacity(0.2),
+                                                        blurRadius: 8,
+                                                        spreadRadius: 0,
+                                                      )
+                                                    ]
+                                                  : [],
+                                            ),
+                                            child: Icon(
+                                              LucideIcons.mic,
+                                              color: _isListening
+                                                  ? AppColors.primaryLight
+                                                  : Colors.white.withOpacity(0.6),
+                                              size: 20,
+                                            ),
+                                          );
+
+                                          if (_isListening) {
+                                            return micIcon.animate(onPlay: (controller) => controller.repeat(reverse: true))
+                                                .fade(begin: 1.0, end: 0.65, duration: 800.ms);
+                                          }
+                                          return micIcon;
+                                        },
                                       ),
                                     ),
                                   ],
