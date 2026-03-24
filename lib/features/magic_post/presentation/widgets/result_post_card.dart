@@ -8,6 +8,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/bouncing_widget.dart';
+import '../../../../downloader.dart' as downloader;
 
 class ResultPostCard extends StatelessWidget {
   final List<String> selectedImagePaths;
@@ -133,8 +134,16 @@ class ResultPostCard extends StatelessWidget {
                           isCompleted: completedSteps.contains(1),
                           onTap: () async {
                             HapticFeedback.mediumImpact();
-                            _showSuccessToast(context, "Image saved to gallery");
-                            setDialogState(() => completedSteps.add(1));
+                            if (finalImageBytes != null) {
+                              _showSuccessToast(context, "Saving to gallery...");
+                              setDialogState(() => completedSteps.add(1));
+                              await downloader.downloadBytes(finalImageBytes!, "magic_post_${DateTime.now().millisecondsSinceEpoch}.png");
+                              _showSuccessToast(context, "Image saved successfully!");
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("No image available to download")),
+                              );
+                            }
                           },
                         ),
                         _buildStepItem(
@@ -447,21 +456,24 @@ class ResultPostCard extends StatelessWidget {
                                   ),
                                 ).animate().fadeIn(delay: 100.ms, duration: 600.ms).slideX(begin: -0.1, end: 0),
 
-                                // Image Carousel
-                                AspectRatio(
-                                  aspectRatio: 4 / 5,
-                                  child: isDemoMode || finalImageBytes == null
-                                      ? Image.asset(
-                                          displayImages[0], // Only showing the first one as an example
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
-                                        )
-                                      : Image.memory(
-                                          finalImageBytes!,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
-                                        ),
-                                ).animate().fadeIn(delay: 200.ms, duration: 800.ms).scale(
+                                  AspectRatio(
+                                    aspectRatio: 4 / 5,
+                                    child: InteractiveViewer(
+                                      minScale: 1.0,
+                                      maxScale: 4.0,
+                                      child: isDemoMode || finalImageBytes == null
+                                          ? Image.asset(
+                                              displayImages[0],
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
+                                            )
+                                          : Image.memory(
+                                              finalImageBytes!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
+                                            ),
+                                    ),
+                                  ).animate().fadeIn(delay: 200.ms, duration: 800.ms).scale(
                                       begin: const Offset(0.95, 0.95),
                                       end: const Offset(1, 1),
                                     ),

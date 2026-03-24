@@ -24,3 +24,18 @@ Future<void> downloadAsset(String assetPath, String fileName) async {
     print('Error downloading asset: $e');
   }
 }
+
+Future<void> downloadBytes(Uint8List bytes, String fileName) async {
+  try {
+    final blob = html.Blob([bytes]);
+    final url = html.Url.createObjectUrlFromBlob(blob);
+    
+    html.AnchorElement(href: url)
+      ..setAttribute('download', fileName)
+      ..click();
+      
+    html.Url.revokeObjectUrl(url);
+  } catch (e) {
+    print('Error downloading bytes: $e');
+  }
+}

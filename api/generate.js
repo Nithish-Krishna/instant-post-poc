@@ -48,7 +48,7 @@ export default async function handler(req, res) {
         Tone: "${tone}"
         
         Your job is to plan the perfect Instagram post. You must return exactly ONE valid JSON object with these three keys:
-        1. "imagePrompt": Write a highly detailed, descriptive prompt that will be fed to an image generator to composite these items together. Include lighting, aesthetic, and instructions to overlay the user's text matching the tone.
+        1. "imagePrompt": Write a highly detailed, descriptive prompt for a 4:5 vertical Instagram post that will be fed to an image generator to composite these items together. Include lighting, aesthetic, and instructions to overlay the user's text matching the tone.
         2. "caption": An engaging Instagram caption matching the tone, with emojis and hashtags.
         3. "musicChoice": A trending song name and artist that fits the vibe.`
       }
@@ -95,7 +95,12 @@ export default async function handler(req, res) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: imageParts }],
-        generationConfig: { responseModalities: ["IMAGE"] } // Strictly request pixels
+        generationConfig: { 
+          responseModalities: ["IMAGE"],
+          imageConfig: {
+            aspectRatio: "4:5"
+          }
+        } // Strictly request pixels
       })
     });
 
