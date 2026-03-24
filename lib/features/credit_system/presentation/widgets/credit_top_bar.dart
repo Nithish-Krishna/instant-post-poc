@@ -8,10 +8,7 @@ import '../../../../core/theme/app_colors.dart';
 class CreditTopBar extends StatelessWidget {
   final int aiCredits;
 
-  const CreditTopBar({
-    super.key,
-    required this.aiCredits,
-  });
+  const CreditTopBar({super.key, required this.aiCredits});
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +34,15 @@ class CreditTopBar extends StatelessWidget {
               ),
               Switch(
                 value: environment.isDemoMode,
-                onChanged: environment.toggleMode,
+                onChanged: (bool value) {
+                  if (value) {
+                    // Switching TO Demo Mode is instant
+                    environment.toggleMode(true);
+                  } else {
+                    // Switching TO Prod Mode (value is false) requires password
+                    _showPasswordDialog(context, environment);
+                  }
+                },
                 activeColor: AppColors.primary,
                 inactiveThumbColor: Colors.white,
                 inactiveTrackColor: Colors.grey.withOpacity(0.3),
@@ -54,7 +59,7 @@ class CreditTopBar extends StatelessWidget {
               ),
             ],
           ),
-          
+
           // Credit Display
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -95,6 +100,57 @@ class CreditTopBar extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPasswordDialog(BuildContext context, AppEnvironment environment) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text(
+          "Enter Admin Code",
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintText: "Password",
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
+            enabledBorder: UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
+            ),
+            focusedBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (controller.text == 'Nieit@123') {
+                environment.toggleMode(false);
+              }
+              Navigator.pop(context);
+            },
+            child: Text(
+              "Submit",
+              style: GoogleFonts.inter(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

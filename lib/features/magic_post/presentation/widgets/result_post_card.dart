@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,8 @@ import '../../../../core/widgets/bouncing_widget.dart';
 
 class ResultPostCard extends StatelessWidget {
   final List<String> selectedImagePaths;
+  final Uint8List? finalImageBytes;
+  final bool isDemoMode;
   final String generatedMusic;
   final String generatedCaption;
   final VoidCallback onReset;
@@ -17,6 +20,8 @@ class ResultPostCard extends StatelessWidget {
   const ResultPostCard({
     super.key,
     required this.selectedImagePaths,
+    this.finalImageBytes,
+    required this.isDemoMode,
     required this.generatedMusic,
     required this.generatedCaption,
     required this.onReset,
@@ -445,11 +450,17 @@ class ResultPostCard extends StatelessWidget {
                                 // Image Carousel
                                 AspectRatio(
                                   aspectRatio: 4 / 5,
-                                  child: Image.asset(
-                                    displayImages[0], // Only showing the first one as an example
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
-                                  ),
+                                  child: isDemoMode || finalImageBytes == null
+                                      ? Image.asset(
+                                          displayImages[0], // Only showing the first one as an example
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
+                                        )
+                                      : Image.memory(
+                                          finalImageBytes!,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
+                                        ),
                                 ).animate().fadeIn(delay: 200.ms, duration: 800.ms).scale(
                                       begin: const Offset(0.95, 0.95),
                                       end: const Offset(1, 1),

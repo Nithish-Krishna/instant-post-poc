@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -7,6 +9,8 @@ import 'package:instant_post_poc/features/magic_post/presentation/widgets/loadin
 import 'package:instant_post_poc/features/magic_post/presentation/widgets/result_post_card.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
+
+import '../../data/magic_post_repository.dart';
 
 import '../../../../core/config/app_environment.dart';
 import '../../../../core/constants/mock_data.dart';
@@ -40,6 +44,12 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
   List<String> _selectedImagePaths = [];
   int _promptIndex = 0;
 
+  // Added Gen Output State
+  Uint8List? _finalImageBytes;
+  String _generatedCaption = MockData.generatedCaption;
+  String _generatedMusic = MockData.generatedMusic;
+  final MagicPostRepository _repository = MagicPostRepository();
+
   @override
   void initState() {
     super.initState();
@@ -56,8 +66,8 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
     super.dispose();
   }
 
-  void _startGeneration() {
-    if (_textController.text.isEmpty) return;
+  void _startGeneration(List<Uint8List> images, String prompt, String tone) async {
+    if (prompt.isEmpty) return;
 
     if (_aiCredits < _costPerGeneration) {
       HapticFeedback.heavyImpact();
@@ -92,19 +102,50 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
         if (!mounted) return;
         _loadingTimer?.cancel();
         setState(() {
+          _finalImageBytes = null;
+          _generatedCaption = MockData.generatedCaption;
+          _generatedMusic = MockData.generatedMusic;
           _currentState = AppState.result;
         });
       });
     } else {
       // Production Mode
-      // TODO: Implement real API call here (ensure backend handles CORS for Flutter Web).
-      // For now, simulate delay then go to result.
-      Future.delayed(const Duration(seconds: 2), () {
+      _loadingTimer = Timer.periodic(const Duration(milliseconds: 900), (timer) {
         if (!mounted) return;
         setState(() {
-          _currentState = AppState.result;
+          _loadingTextIndex = (_loadingTextIndex + 1) % MockData.loadingTexts.length;
         });
       });
+
+      try {
+        final result = await _repository.generatePost(
+          prompt: prompt,
+          tone: tone,
+          images: images,
+        );
+
+        if (!mounted) return;
+
+        final base64Image = result['generatedImage'] as String;
+        final caption = result['caption'] as String;
+        final music = result['musicChoice'] as String;
+
+        _loadingTimer?.cancel();
+        setState(() {
+          _finalImageBytes = base64Decode(base64Image);
+          _generatedCaption = caption;
+          _generatedMusic = music;
+          _currentState = AppState.result;
+        });
+      } catch (e) {
+        if (!mounted) return;
+        _loadingTimer?.cancel();
+        _showSuccessToast("Error: ${e.toString()}");
+        setState(() {
+          _currentState = AppState.input;
+          _aiCredits += _costPerGeneration; // Refund on error
+        });
+      }
     }
   }
 
@@ -269,8 +310,10 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
         return ResultPostCard(
           key: const ValueKey('result'),
           selectedImagePaths: _selectedImagePaths,
-          generatedMusic: MockData.generatedMusic,
-          generatedCaption: MockData.generatedCaption,
+          finalImageBytes: _finalImageBytes,
+          isDemoMode: context.read<AppEnvironment>().isDemoMode,
+          generatedMusic: _generatedMusic,
+          generatedCaption: _generatedCaption,
           onReset: _reset,
         );
     }

@@ -19,7 +19,7 @@ class InputSection extends StatefulWidget {
   final String selectedTone;
   final ValueChanged<String> onToneChanged;
   final VoidCallback onPromptWand;
-  final VoidCallback onGenerate;
+  final void Function(List<Uint8List> images, String prompt, String tone) onGenerate;
   final int costPerGeneration;
 
   const InputSection({
@@ -142,7 +142,11 @@ class _InputSectionState extends State<InputSection> {
         ]);
       });
     } else {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 50,
+        maxWidth: 1080,
+      );
       if (photo != null) {
         setState(() {
           _selectedImages.add(photo);
@@ -162,7 +166,10 @@ class _InputSectionState extends State<InputSection> {
         ]);
       });
     } else {
-      final List<XFile> images = await _picker.pickMultiImage();
+      final List<XFile> images = await _picker.pickMultiImage(
+        imageQuality: 50,
+        maxWidth: 1080,
+      );
       if (images.isNotEmpty) {
         setState(() {
           _selectedImages.addAll(images);
@@ -644,7 +651,11 @@ class _InputSectionState extends State<InputSection> {
                                         return IgnorePointer(
                                           ignoring: widget.textController.text.isEmpty,
                                           child: BouncingWidget(
-                                            onTap: widget.onGenerate,
+                                            onTap: () async {
+                                              FocusScope.of(context).unfocus();
+                                              final images = await getImagesForApiPost();
+                                              widget.onGenerate(images, widget.textController.text, widget.selectedTone);
+                                            },
                                             child: AnimatedOpacity(
                                               duration: const Duration(milliseconds: 200),
                                               opacity: widget.textController.text.isEmpty ? 0.5 : 1.0,
