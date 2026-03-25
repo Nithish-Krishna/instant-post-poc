@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "428865128150",
+    "project_id": "instant-post-poc",
+    "storage_bucket": "instant-post-poc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:428865128150:android:6f54b408ce73aa680d2b77",
+        "android_client_info": {
+          "package_name": "com.example.instant_post_poc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVmKE290yZcBBfslTseisL-ijLy_9--R8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

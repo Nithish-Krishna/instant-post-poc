@@ -18,6 +18,12 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/bouncing_widget.dart';
 import '../../../credit_system/presentation/widgets/credit_top_bar.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:uuid/uuid.dart';
+import '../../../../features/auth/user_service.dart';
+
 enum AppState { input, loading, result }
 
 class MagicGeneratorScreen extends StatefulWidget {
@@ -32,8 +38,8 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
   AppState _currentState = AppState.input;
 
   // AI Credit System State
-  int _aiCredits = 12;
   final int _costPerGeneration = 2;
+  final UserService _userService = UserService();
 
   // UI State
   String _selectedTone = MockData.tones[0];
@@ -69,17 +75,20 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
   void _startGeneration(List<Uint8List> images, String prompt, String tone) async {
     if (prompt.isEmpty) return;
 
-    if (_aiCredits < _costPerGeneration) {
-      HapticFeedback.heavyImpact();
-      _showOutOfCreditsDialog();
-      return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final creditsStream = await _userService.getUserCredits(user.uid).first;
+      if (creditsStream < _costPerGeneration) {
+        HapticFeedback.heavyImpact();
+        _showOutOfCreditsDialog();
+        return;
+      }
     }
 
     HapticFeedback.mediumImpact();
     FocusScope.of(context).unfocus();
 
     setState(() {
-      _aiCredits -= _costPerGeneration;
       _currentState = AppState.loading;
       _loadingTextIndex = 0;
     });
@@ -129,10 +138,32 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
         final base64Image = result['generatedImage'] as String;
         final caption = result['caption'] as String;
         final music = result['musicChoice'] as String;
+        final imageBytes = base64Decode(base64Image);
+
+        // Upload to Storage
+        final currentUser = FirebaseAuth.instance.currentUser!;
+        final postId = const Uuid().v4();
+        final storageRef = FirebaseStorage.instance.ref().child('posts/${currentUser.uid}/$postId.jpg');
+        await storageRef.putData(imageBytes, SettableMetadata(contentType: 'image/jpeg'));
+        final downloadUrl = await storageRef.getDownloadURL();
+
+        // Save to Firestore
+        await FirebaseFirestore.instance.collection('posts').doc(postId).set({
+          'userId': currentUser.uid,
+          'imageUrl': downloadUrl,
+          'caption': caption,
+          'musicChoice': music,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Deduct Credit
+        await _userService.deductCredit(currentUser.uid, _costPerGeneration);
 
         _loadingTimer?.cancel();
+        if (!mounted) return;
+        
         setState(() {
-          _finalImageBytes = base64Decode(base64Image);
+          _finalImageBytes = imageBytes;
           _generatedCaption = caption;
           _generatedMusic = music;
           _currentState = AppState.result;
@@ -143,7 +174,6 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
         _showSuccessToast("Error: ${e.toString()}");
         setState(() {
           _currentState = AppState.input;
-          _aiCredits += _costPerGeneration; // Refund on error
         });
       }
     }
@@ -244,10 +274,15 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
             ),
             const SizedBox(height: 32),
             BouncingWidget(
-              onTap: () {
+              onTap: () async {
                 HapticFeedback.mediumImpact();
-                setState(() => _aiCredits += 20); // Dummy refill
-                Navigator.pop(context);
+                final user = FirebaseAuth.instance.currentUser;
+                if (user != null) {
+                   await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                     'credits': FieldValue.increment(20)
+                   });
+                }
+                if (mounted) Navigator.pop(context);
                 _showSuccessToast("20 AI Credits added!");
               },
               child: Container(
@@ -341,7 +376,7 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
               top: 0,
               left: 0,
               right: 0,
-              child: CreditTopBar(aiCredits: _aiCredits),
+              child: const CreditTopBar(),
             ),
           ],
         ),

@@ -4,11 +4,11 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/app_environment.dart';
 import '../../../../core/theme/app_colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../../auth/user_service.dart';
 
 class CreditTopBar extends StatelessWidget {
-  final int aiCredits;
-
-  const CreditTopBar({super.key, required this.aiCredits});
+  const CreditTopBar({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -61,46 +61,54 @@ class CreditTopBar extends StatelessWidget {
           ),
 
           // Credit Display
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(LucideIcons.zap, color: AppColors.warning, size: 16),
-                const SizedBox(width: 8),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (child, animation) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, -0.5),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: FadeTransition(opacity: animation, child: child),
-                  ),
-                  child: Text(
-                    "$aiCredits",
-                    key: ValueKey<int>(aiCredits),
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
+          StreamBuilder<int>(
+            stream: FirebaseAuth.instance.currentUser != null
+                ? UserService().getUserCredits(FirebaseAuth.instance.currentUser!.uid)
+                : Stream.value(0),
+            builder: (context, snapshot) {
+              final aiCredits = snapshot.data ?? 0;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(LucideIcons.zap, color: AppColors.warning, size: 16),
+                    const SizedBox(width: 8),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) => SlideTransition(
+                        position: Tween<Offset>(
+                          begin: const Offset(0, -0.5),
+                          end: Offset.zero,
+                        ).animate(animation),
+                        child: FadeTransition(opacity: animation, child: child),
+                      ),
+                      child: Text(
+                        "$aiCredits",
+                        key: ValueKey<int>(aiCredits),
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
           ),
         ],
       ),

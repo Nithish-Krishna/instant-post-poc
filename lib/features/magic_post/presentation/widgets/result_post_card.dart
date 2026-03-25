@@ -13,6 +13,8 @@ import '../../../../downloader.dart' as downloader;
 class ResultPostCard extends StatelessWidget {
   final List<String> selectedImagePaths;
   final Uint8List? finalImageBytes;
+  final String? networkImageUrl;
+  final bool isFromHistory;
   final bool isDemoMode;
   final String generatedMusic;
   final String generatedCaption;
@@ -22,6 +24,8 @@ class ResultPostCard extends StatelessWidget {
     super.key,
     required this.selectedImagePaths,
     this.finalImageBytes,
+    this.networkImageUrl,
+    this.isFromHistory = false,
     required this.isDemoMode,
     required this.generatedMusic,
     required this.generatedCaption,
@@ -126,28 +130,29 @@ class ResultPostCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 24),
+                        if (!isFromHistory)
+                          _buildStepItem(
+                            index: 1,
+                            title: "Download Post Image",
+                            subtitle: "Save to your photos",
+                            icon: LucideIcons.download,
+                            isCompleted: completedSteps.contains(1),
+                            onTap: () async {
+                              HapticFeedback.mediumImpact();
+                              if (finalImageBytes != null) {
+                                _showSuccessToast(context, "Saving to gallery...");
+                                setDialogState(() => completedSteps.add(1));
+                                await downloader.downloadBytes(finalImageBytes!, "magic_post_${DateTime.now().millisecondsSinceEpoch}.png");
+                                _showSuccessToast(context, "Image saved successfully!");
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("No image available to download")),
+                                );
+                              }
+                            },
+                          ),
                         _buildStepItem(
-                          index: 1,
-                          title: "Download Post Image",
-                          subtitle: "Save to your photos",
-                          icon: LucideIcons.download,
-                          isCompleted: completedSteps.contains(1),
-                          onTap: () async {
-                            HapticFeedback.mediumImpact();
-                            if (finalImageBytes != null) {
-                              _showSuccessToast(context, "Saving to gallery...");
-                              setDialogState(() => completedSteps.add(1));
-                              await downloader.downloadBytes(finalImageBytes!, "magic_post_${DateTime.now().millisecondsSinceEpoch}.png");
-                              _showSuccessToast(context, "Image saved successfully!");
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text("No image available to download")),
-                              );
-                            }
-                          },
-                        ),
-                        _buildStepItem(
-                          index: 2,
+                          index: isFromHistory ? 1 : 2,
                           title: "Copy Trending Music",
                           subtitle: generatedMusic,
                           icon: LucideIcons.copy,
@@ -159,7 +164,7 @@ class ResultPostCard extends StatelessWidget {
                           },
                         ),
                         _buildStepItem(
-                          index: 3,
+                          index: isFromHistory ? 2 : 3,
                           title: "Copy Perfect Caption",
                           subtitle: "Engagement optimized",
                           icon: LucideIcons.copy,
@@ -171,7 +176,7 @@ class ResultPostCard extends StatelessWidget {
                           },
                         ),
                         _buildStepItem(
-                          index: 4,
+                          index: isFromHistory ? 3 : 4,
                           title: "Open Instagram",
                           subtitle: "Select 'Post'",
                           icon: LucideIcons.externalLink,
@@ -461,17 +466,23 @@ class ResultPostCard extends StatelessWidget {
                                     child: InteractiveViewer(
                                       minScale: 1.0,
                                       maxScale: 4.0,
-                                      child: isDemoMode || finalImageBytes == null
-                                          ? Image.asset(
-                                              displayImages[0],
+                                      child: networkImageUrl != null
+                                          ? Image.network(
+                                              networkImageUrl!,
                                               fit: BoxFit.cover,
                                               errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
                                             )
-                                          : Image.memory(
-                                              finalImageBytes!,
-                                              fit: BoxFit.cover,
-                                              errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
-                                            ),
+                                          : (isDemoMode || finalImageBytes == null)
+                                              ? Image.asset(
+                                                  displayImages[0],
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
+                                                )
+                                              : Image.memory(
+                                                  finalImageBytes!,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) => Container(color: Colors.grey.withOpacity(0.2)),
+                                                ),
                                     ),
                                   ).animate().fadeIn(delay: 200.ms, duration: 800.ms).scale(
                                       begin: const Offset(0.95, 0.95),
@@ -641,7 +652,7 @@ class ResultPostCard extends StatelessWidget {
                         TextButton(
                           onPressed: onReset,
                           child: Text(
-                            "Create Another",
+                            isFromHistory ? "Close" : "Create Another",
                             style: GoogleFonts.inter(
                               color: Colors.white.withOpacity(0.5),
                               fontSize: 14,
