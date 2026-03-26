@@ -9,6 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/bouncing_widget.dart';
 import '../../../../downloader.dart' as downloader;
+import 'package:provider/provider.dart';
+import '../../../profile/data/user_settings_provider.dart';
+import 'package:http/http.dart' as http;
 
 class ResultPostCard extends StatelessWidget {
   final List<String> selectedImagePaths;
@@ -70,6 +73,7 @@ class ResultPostCard extends StatelessWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) {
+          final showDownload = !isFromHistory || networkImageUrl != null;
           return Center(
             child: Container(
               width: 340,
@@ -130,7 +134,7 @@ class ResultPostCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 24),
-                        if (!isFromHistory)
+                        if (showDownload)
                           _buildStepItem(
                             index: 1,
                             title: "Download Post Image",
@@ -144,6 +148,25 @@ class ResultPostCard extends StatelessWidget {
                                 setDialogState(() => completedSteps.add(1));
                                 await downloader.downloadBytes(finalImageBytes!, "magic_post_${DateTime.now().millisecondsSinceEpoch}.png");
                                 _showSuccessToast(context, "Image saved successfully!");
+                              } else if (networkImageUrl != null) {
+                                _showSuccessToast(context, "Fetching high-res image...");
+                                try {
+                                  final response = await http.get(Uri.parse(networkImageUrl!));
+                                  if (response.statusCode == 200) {
+                                    setDialogState(() => completedSteps.add(1));
+                                    await downloader.downloadBytes(
+                                      response.bodyBytes, 
+                                      "magic_post_${DateTime.now().millisecondsSinceEpoch}.png"
+                                    );
+                                    _showSuccessToast(context, "Image saved successfully!");
+                                  } else {
+                                    throw Exception("Failed to fetch image");
+                                  }
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text("Error fetching image: $e")),
+                                  );
+                                }
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text("No image available to download")),
@@ -152,7 +175,7 @@ class ResultPostCard extends StatelessWidget {
                             },
                           ),
                         _buildStepItem(
-                          index: isFromHistory ? 1 : 2,
+                          index: showDownload ? 2 : 1,
                           title: "Copy Trending Music",
                           subtitle: generatedMusic,
                           icon: LucideIcons.copy,
@@ -164,7 +187,7 @@ class ResultPostCard extends StatelessWidget {
                           },
                         ),
                         _buildStepItem(
-                          index: isFromHistory ? 2 : 3,
+                          index: showDownload ? 3 : 2,
                           title: "Copy Perfect Caption",
                           subtitle: "Engagement optimized",
                           icon: LucideIcons.copy,
@@ -176,7 +199,7 @@ class ResultPostCard extends StatelessWidget {
                           },
                         ),
                         _buildStepItem(
-                          index: isFromHistory ? 3 : 4,
+                          index: showDownload ? 4 : 3,
                           title: "Open Instagram",
                           subtitle: "Select 'Post'",
                           icon: LucideIcons.externalLink,
@@ -331,6 +354,7 @@ class ResultPostCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final userSettings = context.watch<UserSettingsProvider>();
     final List<String> displayImages = selectedImagePaths.isNotEmpty
         ? selectedImagePaths
         : ['assets/post2.png'];
@@ -384,8 +408,10 @@ class ResultPostCard extends StatelessWidget {
                                             color: Colors.white.withOpacity(0.2),
                                             width: 1.5,
                                           ),
-                                          image: const DecorationImage(
-                                            image: AssetImage('assets/profile.jpg'),
+                                          image: DecorationImage(
+                                            image: userSettings.profilePictureUrl.isNotEmpty
+                                                ? NetworkImage(userSettings.profilePictureUrl) as ImageProvider
+                                                : const AssetImage('assets/profile.jpg'),
                                             fit: BoxFit.cover,
                                           ),
                                         ),
@@ -398,7 +424,7 @@ class ResultPostCard extends StatelessWidget {
                                             Row(
                                               children: [
                                                 Text(
-                                                  "thecrumbco",
+                                                  userSettings.instagramUsername,
                                                   style: GoogleFonts.inter(
                                                     color: Colors.white,
                                                     fontWeight: FontWeight.w700,
@@ -550,9 +576,9 @@ class ResultPostCard extends StatelessWidget {
                                                   height: 1.5,
                                                 ),
                                                 children: [
-                                                  const TextSpan(
-                                                    text: "thecrumbco ",
-                                                    style: TextStyle(
+                                                  TextSpan(
+                                                    text: "${userSettings.instagramUsername} ",
+                                                    style: const TextStyle(
                                                       fontWeight: FontWeight.w700,
                                                     ),
                                                   ),

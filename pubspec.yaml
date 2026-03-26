@@ -48,7 +48,8 @@ dependencies:
   cloud_firestore: ^6.2.0
   firebase_storage: ^13.2.0
   firebase_ui_auth: ^3.0.1
-  google_sign_in: ^7.2.0
+  firebase_ui_oauth_google: ^2.0.1
+  google_sign_in: ^6.3.0
   uuid: ^4.5.3
 
 dev_dependencies:

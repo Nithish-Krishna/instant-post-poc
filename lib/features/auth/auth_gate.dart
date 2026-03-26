@@ -1,8 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart' hide EmailAuthProvider;
 import 'package:firebase_ui_auth/firebase_ui_auth.dart';
+import 'package:firebase_ui_oauth_google/firebase_ui_oauth_google.dart';
 import 'package:flutter/material.dart';
 
-import '../../main_screen.dart';
+import '../magic_post/presentation/screens/magic_generator_screen.dart';
 import 'user_service.dart';
 
 class AuthGate extends StatelessWidget {
@@ -17,6 +18,7 @@ class AuthGate extends StatelessWidget {
           return SignInScreen(
             providers: [
               EmailAuthProvider(),
+              GoogleProvider(clientId: '428865128150-q77ngu2iimpkpqemqqekriud85f7l379.apps.googleusercontent.com'),
             ],
             headerBuilder: (context, constraints, shrinkOffset) {
               return const Padding(
@@ -79,6 +81,6 @@ class _UserInitializationWrapperState extends State<UserInitializationWrapper> {
       );
     }
     // We will later change this to return the Main/BottomNav Screen
-    return const MainScreen();
+    return const MagicGeneratorScreen();
   }
 }

@@ -23,7 +23,7 @@ class HistoryScreen extends StatelessWidget {
           'History',
           style: GoogleFonts.inter(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.background,
         foregroundColor: Colors.white,
         elevation: 0,
       ),

@@ -23,6 +23,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../features/auth/user_service.dart';
+import 'dart:ui';
+import '../../../history/presentation/screens/history_screen.dart';
+import '../../../profile/presentation/screens/settings_screen.dart';
+import '../../../profile/presentation/screens/about_screen.dart';
 
 enum AppState { input, loading, result }
 
@@ -200,11 +204,14 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
               size: 20,
             ),
             const SizedBox(width: 12),
-            Text(
-              message,
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -214,6 +221,26 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.only(bottom: 20, left: 20, right: 20),
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupItem(IconData icon, String title) {
+    return PopupMenuItem<String>(
+      value: title,
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white70, size: 18),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -359,26 +386,51 @@ class _MagicGeneratorScreenState extends State<MagicGeneratorScreen>
     return Scaffold(
       resizeToAvoidBottomInset: true,
       backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        actions: [
+          const CreditTopBar(),
+          PopupMenuButton<String>(
+            icon: const Icon(LucideIcons.menu, color: Colors.white),
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            offset: const Offset(0, 50),
+            elevation: 8,
+            popUpAnimationStyle: AnimationStyle(
+              duration: Duration.zero,
+              reverseDuration: Duration.zero,
+            ),
+            onSelected: (value) {
+              if (value == 'History') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+              } else if (value == 'Settings') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+              } else if (value == 'Tutorial') {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tutorial coming soon!')));
+              } else if (value == 'About') {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutScreen()));
+              }
+            },
+            itemBuilder: (context) => [
+              _buildPopupItem(LucideIcons.history, 'History'),
+              _buildPopupItem(LucideIcons.settings, 'Settings'),
+              _buildPopupItem(LucideIcons.playCircle, 'Tutorial'),
+              _buildPopupItem(LucideIcons.info, 'About'),
+            ],
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: SafeArea(
-        child: Stack(
-          children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 600),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              child: _buildCurrentState(),
-            ),
-            // Persistent Credit Bar
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: const CreditTopBar(),
-            ),
-          ],
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 600),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          child: _buildCurrentState(),
         ),
       ),
     );

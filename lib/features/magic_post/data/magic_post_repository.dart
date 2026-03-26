@@ -11,8 +11,8 @@ class MagicPostRepository {
   }) async {
     // Determine Base URL depending on environment
     final String baseUrl = kDebugMode
-        ? 'http://localhost:3000'
-        : ''; // In production web, relative paths work
+        ? 'https://instant-post-poc.vercel.app'
+        : 'https://instant-post-poc.vercel.app'; // Production URL for both modes to ensure mobile works
 
     final Uri uri = Uri.parse('$baseUrl/api/generate');
 

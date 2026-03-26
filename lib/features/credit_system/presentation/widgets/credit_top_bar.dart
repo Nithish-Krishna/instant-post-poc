@@ -1,73 +1,29 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:provider/provider.dart';
-import '../../../../core/config/app_environment.dart';
 import '../../../../core/theme/app_colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../auth/user_service.dart';
+import 'dart:ui';
 
 class CreditTopBar extends StatelessWidget {
   const CreditTopBar({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final environment = context.watch<AppEnvironment>();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          // Demo / Production Switch
-          Row(
-            children: [
-              Text(
-                "Prod",
-                style: GoogleFonts.inter(
-                  color: !environment.isDemoMode
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.5),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Switch(
-                value: environment.isDemoMode,
-                onChanged: (bool value) {
-                  if (value) {
-                    // Switching TO Demo Mode is instant
-                    environment.toggleMode(true);
-                  } else {
-                    // Switching TO Prod Mode (value is false) requires password
-                    _showPasswordDialog(context, environment);
-                  }
-                },
-                activeColor: AppColors.primary,
-                inactiveThumbColor: Colors.white,
-                inactiveTrackColor: Colors.grey.withOpacity(0.3),
-              ),
-              Text(
-                "Demo",
-                style: GoogleFonts.inter(
-                  color: environment.isDemoMode
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.5),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-
-          // Credit Display
-          StreamBuilder<int>(
-            stream: FirebaseAuth.instance.currentUser != null
-                ? UserService().getUserCredits(FirebaseAuth.instance.currentUser!.uid)
-                : Stream.value(0),
-            builder: (context, snapshot) {
-              final aiCredits = snapshot.data ?? 0;
-              return Container(
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: StreamBuilder<int>(
+          stream: FirebaseAuth.instance.currentUser != null
+              ? UserService().getUserCredits(FirebaseAuth.instance.currentUser!.uid)
+              : Stream.value(0),
+          builder: (context, snapshot) {
+            final aiCredits = snapshot.data ?? 0;
+            return GestureDetector(
+              onTap: () => _showCreditsStore(context),
+              child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppColors.surface,
@@ -107,61 +63,186 @@ class CreditTopBar extends StatelessWidget {
                     ),
                   ],
                 ),
-              );
-            }
-          ),
-        ],
+              ),
+            );
+          }
+        ),
       ),
     );
   }
 
-  void _showPasswordDialog(BuildContext context, AppEnvironment environment) {
-    final controller = TextEditingController();
+
+  void _showCreditsStore(BuildContext context) {
+    HapticFeedback.heavyImpact();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          "Enter Admin Code",
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+      barrierColor: Colors.black.withOpacity(0.7),
+      builder: (context) => Center(
+        child: Container(
+          width: 340,
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
           ),
-        ),
-        content: TextField(
-          controller: controller,
-          obscureText: true,
-          autofocus: true,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: "Password",
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-            enabledBorder: UnderlineInputBorder(
-              borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-            ),
-            focusedBorder: const UnderlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary),
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              if (controller.text == 'Nieit@123') {
-                environment.toggleMode(false);
-              }
-              Navigator.pop(context);
-            },
-            child: Text(
-              "Submit",
-              style: GoogleFonts.inter(
-                color: AppColors.primary,
-                fontWeight: FontWeight.bold,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.surface.withOpacity(0.9),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 20),
+                        Text(
+                          "Get More Magic ✨",
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(LucideIcons.x, color: Colors.white54, size: 20),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    _buildPriceTier(
+                      context: context,
+                      title: "Starter",
+                      credits: "50 Credits",
+                      price: "₹99",
+                      icon: LucideIcons.zap,
+                      color: Colors.blueAccent,
+                    ),
+                    const SizedBox(height: 12),
+                    _buildPriceTier(
+                      context: context,
+                      title: "Pro",
+                      credits: "200 Credits",
+                      price: "₹299",
+                      icon: LucideIcons.sparkles,
+                      color: AppColors.primary,
+                      tag: "Save 20%",
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      "Secure checkout powered by Razorpay",
+                      style: GoogleFonts.inter(color: Colors.white24, fontSize: 11),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceTier({
+    required BuildContext context,
+    required String title,
+    required String credits,
+    required String price,
+    required IconData icon,
+    required Color color,
+    String? tag,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Payment gateway coming soon!", style: GoogleFonts.inter()),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.surfaceHighlight,
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (tag != null) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            tag,
+                            style: GoogleFonts.inter(
+                              color: AppColors.success,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    credits,
+                    style: GoogleFonts.inter(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              price,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -316,7 +318,9 @@ class _InputSectionState extends State<InputSection> {
                                                 ),
                                                 child: item is String
                                                     ? Image.asset(item, fit: BoxFit.cover)
-                                                    : Image.network((item as XFile).path, fit: BoxFit.cover),
+                                                    : kIsWeb
+                                                        ? Image.network((item as XFile).path, fit: BoxFit.cover)
+                                                        : Image.file(File((item as XFile).path), fit: BoxFit.cover),
                                               ).animate().scale(
                                                     begin: const Offset(0.8, 0.8),
                                                     end: const Offset(1, 1),
@@ -327,10 +331,12 @@ class _InputSectionState extends State<InputSection> {
                                                 right: -4,
                                                 child: GestureDetector(
                                                   onTap: () {
-                                                    HapticFeedback.lightImpact();
-                                                    setState(() {
-                                                      _selectedImages.removeAt(index);
-                                                    });
+                                                    if (index >= 0 && index < _selectedImages.length) {
+                                                      HapticFeedback.lightImpact();
+                                                      setState(() {
+                                                        _selectedImages.removeAt(index);
+                                                      });
+                                                    }
                                                   },
                                                   child: Container(
                                                     padding: const EdgeInsets.all(4),

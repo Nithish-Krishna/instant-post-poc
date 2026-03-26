@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'features/profile/data/user_settings_provider.dart';
 import 'core/config/app_environment.dart';
 import 'core/theme/app_theme.dart';
 
@@ -24,8 +25,11 @@ void main() async {
   }
   
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AppEnvironment(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppEnvironment()),
+        ChangeNotifierProvider(create: (_) => UserSettingsProvider()),
+      ],
       child: const AIMagicApp(),
     ),
   );
